@@ -722,6 +722,19 @@ class ApplicationController {
       return await llmService.testConnection();
     });
 
+    ipcMain.handle("get-ollama-models", async () => {
+      try {
+        return await llmService._ollamaListModels();
+      } catch (error) {
+        logger.error("Failed to list Ollama models", { error: error.message });
+        return { success: false, error: error.message, models: [] };
+      }
+    });
+
+    ipcMain.handle("test-ollama-connection", async () => {
+      return await llmService._ollamaTestConnection();
+    });
+
     ipcMain.handle("run-gemini-diagnostics", async () => {
       try {
         const connectivity = await llmService.checkNetworkConnectivity();
@@ -1162,7 +1175,11 @@ class ApplicationController {
         duration: Date.now() - startTime,
       });
 
-      windowManager.hideLLMResponse();
+      windowManager.showLLMResponse(`### Analysis Failed\n\n${error.message}\n\n*Please check your API key configuration in Settings.*`, {
+        skill: this.activeSkill,
+        error: true,
+        processingTime: Date.now() - startTime
+      });
       this.broadcastOCRError(error.message);
       
       sessionManager.addConversationEvent({
@@ -1473,6 +1490,8 @@ class ApplicationController {
       openrouterModel: process.env.OPENROUTER_MODEL || "openrouter/free",
       groqKey: process.env.GROQ_API_KEY || "",
       groqModel: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+      ollamaBaseUrl: process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || "http://localhost:11434",
+      ollamaModel: process.env.OLLAMA_MODEL || "llama3.2",
 
       speechProvider: speechService.provider || "whisper",
       azureKey: process.env.AZURE_SPEECH_KEY || "",
@@ -1579,16 +1598,22 @@ class ApplicationController {
       if (settings.geminiKey !== undefined) {
         envUpdates.GEMINI_API_KEY = settings.geminiKey;
       }
+      if (settings.ollamaBaseUrl !== undefined) {
+        envUpdates.OLLAMA_BASE_URL = settings.ollamaBaseUrl;
+      }
+      if (settings.ollamaModel !== undefined) {
+        envUpdates.OLLAMA_MODEL = settings.ollamaModel;
+      }
 
       const persistedKeys = this.persistEnvUpdates(envUpdates);
 
-      // Reinitialize LLM service when provider, API key, or model changes.
+      // Reinitialize LLM service when provider, API key, model, or base URL changes.
       // Without this the test-connection button and all AI calls would
       // use stale credentials or the wrong provider.
       const llmProviderChanged = settings.llmProvider !== undefined &&
         (process.env.LLM_PROVIDER || "gemini") !== settings.llmProvider;
       const llmKeyChanged = settings.geminiKey !== undefined || settings.openrouterKey !== undefined || settings.groqKey !== undefined;
-      const llmModelChanged = settings.openrouterModel !== undefined || settings.groqModel !== undefined;
+      const llmModelChanged = settings.openrouterModel !== undefined || settings.groqModel !== undefined || settings.ollamaModel !== undefined || settings.ollamaBaseUrl !== undefined;
       if (llmProviderChanged || llmKeyChanged || llmModelChanged) {
         try {
           llmService.initializeClient();

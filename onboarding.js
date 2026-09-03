@@ -30,12 +30,14 @@
   // ── State ─────────────────────────────────────────────────────────
   const state = {
     step: 0,
-    llmProvider: 'gemini', // 'gemini' | 'openrouter' | 'groq'
+    llmProvider: 'gemini', // 'gemini' | 'openrouter' | 'groq' | 'ollama'
     geminiKey: '',
     openrouterKey: '',
     openrouterModel: 'openrouter/free',
     groqKey: '',
     groqModel: 'llama-3.3-70b-versatile',
+    ollamaBaseUrl: 'http://localhost:11434',
+    ollamaModel: 'llama3.2',
     speechProvider: null, // 'whisper' | 'azure' | 'skip'
     azureKey: '',
     azureRegion: '',
@@ -133,6 +135,9 @@
         if (state.llmProvider === 'groq') {
           return !!state.groqKey.trim();
         }
+        if (state.llmProvider === 'ollama') {
+          return !!state.ollamaBaseUrl.trim();
+        }
         return !!state.geminiKey.trim();
       case 'speech':
         if (state.speechProvider === 'azure') {
@@ -197,6 +202,7 @@
   const onboardingGeminiFields = document.getElementById('onboardingGeminiFields');
   const onboardingOpenrouterFields = document.getElementById('onboardingOpenrouterFields');
   const onboardingGroqFields = document.getElementById('onboardingGroqFields');
+  const onboardingOllamaFields = document.getElementById('onboardingOllamaFields');
 
   if (llmProviderChoices) {
     llmProviderChoices.querySelectorAll('.choice-card').forEach((card) => {
@@ -213,6 +219,9 @@
         }
         if (onboardingGroqFields) {
           onboardingGroqFields.style.display = value === 'groq' ? 'block' : 'none';
+        }
+        if (onboardingOllamaFields) {
+          onboardingOllamaFields.style.display = value === 'ollama' ? 'block' : 'none';
         }
         // Reset the key status when switching providers
         if (keyStatus) keyStatus.style.display = 'none';
@@ -247,6 +256,21 @@
   if (onboardingGroqModel) {
     onboardingGroqModel.addEventListener('input', () => {
       state.groqModel = onboardingGroqModel.value.trim() || 'llama-3.3-70b-versatile';
+    });
+  }
+
+  // Wire up Ollama base URL and model inputs
+  const onboardingOllamaBaseUrl = document.getElementById('onboardingOllamaBaseUrl');
+  const onboardingOllamaModel = document.getElementById('onboardingOllamaModel');
+
+  if (onboardingOllamaBaseUrl) {
+    onboardingOllamaBaseUrl.addEventListener('input', () => {
+      state.ollamaBaseUrl = onboardingOllamaBaseUrl.value.trim() || 'http://localhost:11434';
+    });
+  }
+  if (onboardingOllamaModel) {
+    onboardingOllamaModel.addEventListener('input', () => {
+      state.ollamaModel = onboardingOllamaModel.value.trim() || 'llama3.2';
     });
   }
 
@@ -537,6 +561,22 @@
         value: state.groqModel,
         cls: 'ok',
       });
+    } else if (state.llmProvider === 'ollama') {
+      rows.push({
+        label: '<i class="fas fa-server"></i> LLM Provider',
+        value: 'Ollama (Local AI)',
+        cls: 'ok',
+      });
+      rows.push({
+        label: '<i class="fas fa-network-wired"></i> Host URL',
+        value: state.ollamaBaseUrl || 'http://localhost:11434',
+        cls: 'ok',
+      });
+      rows.push({
+        label: '<i class="fas fa-cube"></i> Model',
+        value: state.ollamaModel || 'llama3.2',
+        cls: 'ok',
+      });
     } else {
       rows.push({
         label: '<i class="fas fa-key"></i> Gemini API',
@@ -624,6 +664,9 @@
         } else if (state.llmProvider === 'groq') {
           if (state.groqKey) payload.groqKey = state.groqKey;
           payload.groqModel = state.groqModel;
+        } else if (state.llmProvider === 'ollama') {
+          payload.ollamaBaseUrl = state.ollamaBaseUrl;
+          payload.ollamaModel = state.ollamaModel;
         } else if (state.geminiKey) {
           payload.geminiKey = state.geminiKey;
         }
@@ -782,6 +825,14 @@
         if (onboardingGroqKey) onboardingGroqKey.placeholder = '•••••••••••••••• (already set)';
         if (onboardingGroqModel) onboardingGroqModel.value = s.groqModel || 'llama-3.3-70b-versatile';
         state.groqModel = s.groqModel || 'llama-3.3-70b-versatile';
+      } else if (s.llmProvider === 'ollama') {
+        state.llmProvider = 'ollama';
+        const ollamaCard = llmProviderChoices?.querySelector('[data-value="ollama"]');
+        if (ollamaCard) ollamaCard.click();
+        if (onboardingOllamaBaseUrl) onboardingOllamaBaseUrl.value = s.ollamaBaseUrl || 'http://localhost:11434';
+        if (onboardingOllamaModel) onboardingOllamaModel.value = s.ollamaModel || 'llama3.2';
+        state.ollamaBaseUrl = s.ollamaBaseUrl || 'http://localhost:11434';
+        state.ollamaModel = s.ollamaModel || 'llama3.2';
       } else if (s.geminiConfigured) {
         const geminiCard = llmProviderChoices?.querySelector('[data-value="gemini"]');
         if (geminiCard) geminiCard.click();

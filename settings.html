@@ -508,6 +508,7 @@
                             <option value="gemini">Google Gemini</option>
                             <option value="openrouter">OpenRouter</option>
                             <option value="groq">Groq</option>
+                            <option value="ollama">Ollama (Local AI)</option>
                         </select>
                     </div>
 
@@ -561,6 +562,39 @@
                                 </div>
                             </div>
                             <input type="text" class="input-field" id="groqModel" placeholder="llama-3.3-70b-versatile">
+                        </div>
+                    </div>
+
+                    <div id="ollamaLlmFields" class="settings-group" style="display:none;">
+                        <div class="settings-item">
+                            <div>
+                                <div class="settings-item-label">Ollama Host / Base URL</div>
+                                <div class="settings-item-description">Default: <code>http://localhost:11434</code></div>
+                            </div>
+                            <input type="text" class="input-field" id="ollamaBaseUrl" placeholder="http://localhost:11434">
+                        </div>
+                        <div class="settings-item">
+                            <div>
+                                <div class="settings-item-label">Model Name</div>
+                                <div class="settings-item-description">
+                                    Local model name (e.g. <code>llama3.2</code>, <code>llama3.2-vision</code>, <code>qwen2.5-coder</code>)
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" class="input-field" id="ollamaModel" placeholder="llama3.2" style="flex: 1;">
+                                <button type="button" class="btn" id="fetchOllamaModelsBtn" title="Fetch installed local models from Ollama">
+                                    <i class="fas fa-sync-alt"></i> Fetch
+                                </button>
+                            </div>
+                        </div>
+                        <div id="ollamaModelListContainer" style="display: none; padding: 0 8px 8px 8px;">
+                            <div class="settings-item-description" style="margin-bottom: 4px;">Detected Installed Models:</div>
+                            <select class="input-field" id="ollamaModelSelect" style="width: 100%;">
+                                <option value="">-- Select detected model --</option>
+                            </select>
+                        </div>
+                        <div class="settings-note" id="ollamaNote">
+                            Runs 100% locally and privately. Ensure Ollama is running (<code>ollama serve</code>). For screenshot analysis, use a vision model like <code>llama3.2-vision</code> or <code>llava</code>.
                         </div>
                     </div>
                 </div>

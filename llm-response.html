@@ -594,15 +594,24 @@
         }
 
         function renderMarkdown(text) {
-            if (typeof marked !== 'undefined') {
-                return marked.parse ? marked.parse(text) : marked(text);
+            if (!text) return '';
+            try {
+                if (typeof marked !== 'undefined') {
+                    return marked.parse ? marked.parse(text) : marked(text);
+                }
+
+                if (typeof markdown !== 'undefined' && typeof markdown.toHTML === 'function') {
+                    return markdown.toHTML(text);
+                }
+            } catch (err) {
+                console.warn('[LLM-RESPONSE] Markdown rendering exception, using fallback', err);
             }
 
-            if (typeof markdown !== 'undefined' && typeof markdown.toHTML === 'function') {
-                return markdown.toHTML(text);
-            }
-
-            return escapeHtml(text).replace(/\n/g, '<br>');
+            return escapeHtml(text)
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/`(.+?)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
         }
 
         function calculateContentMetrics(response, codeBlocks) {

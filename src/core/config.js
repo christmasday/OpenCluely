@@ -41,8 +41,8 @@ class ConfigManager {
       llm: {
         provider: 'gemini',
         gemini: {
-          model: 'gemini-3.5-flash',
-          fallbackModels: ['gemini-3-flash-preview', 'gemini-2.5-flash'],
+          model: 'gemini-2.5-flash',
+          fallbackModels: ['gemini-2.0-flash', 'gemini-1.5-flash'],
           maxRetries: 1,
           timeout: 30000,
           fallbackEnabled: true,
@@ -69,6 +69,16 @@ class ConfigManager {
           model: 'llama-3.3-70b-versatile',
           maxRetries: 1,
           timeout: 30000,
+          generation: {
+            temperature: 0.7,
+            maxOutputTokens: 4096
+          }
+        },
+        ollama: {
+          baseUrl: 'http://localhost:11434',
+          model: 'llama3.2',
+          maxRetries: 1,
+          timeout: 60000,
           generation: {
             temperature: 0.7,
             maxOutputTokens: 4096

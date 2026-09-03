@@ -41,6 +41,9 @@ class FirstRunManager {
       const grKey = (content.GROQ_API_KEY || '').trim();
       return !grKey || grKey === 'your_groq_api_key_here';
     }
+    if (provider === 'ollama') {
+      return false;
+    }
     const gemini = (content.GEMINI_API_KEY || '').trim();
     return !gemini || gemini === 'your_gemini_api_key_here';
   }
@@ -103,6 +106,9 @@ class FirstRunManager {
       openrouterModel: env.OPENROUTER_MODEL || 'openrouter/free',
       groqConfigured: grKeyConfigured,
       groqModel: env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+      ollamaConfigured: true,
+      ollamaBaseUrl: env.OLLAMA_BASE_URL || 'http://localhost:11434',
+      ollamaModel: env.OLLAMA_MODEL || 'llama3.2',
       azureConfigured: !!(env.AZURE_SPEECH_KEY || '').trim() && !!(env.AZURE_SPEECH_REGION || '').trim(),
       whisperConfigured: !!(env.WHISPER_COMMAND || '').trim(),
       needsOnboarding: this.needsOnboarding()

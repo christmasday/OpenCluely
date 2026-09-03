@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const openrouterModelInput = document.getElementById('openrouterModel');
     const groqKeyInput = document.getElementById('groqKey');
     const groqModelInput = document.getElementById('groqModel');
+    const ollamaBaseUrlInput = document.getElementById('ollamaBaseUrl');
+    const ollamaModelInput = document.getElementById('ollamaModel');
+    const fetchOllamaModelsBtn = document.getElementById('fetchOllamaModelsBtn');
+    const ollamaModelSelect = document.getElementById('ollamaModelSelect');
+    const ollamaModelListContainer = document.getElementById('ollamaModelListContainer');
 
     // Check if window.api exists
     if (!window.api) {
@@ -103,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (openrouterModelInput) openrouterModelInput.value = settings.openrouterModel || 'openrouter/free';
         if (groqKeyInput) groqKeyInput.value = settings.groqKey || '';
         if (groqModelInput) groqModelInput.value = settings.groqModel || 'llama-3.3-70b-versatile';
+        if (ollamaBaseUrlInput) ollamaBaseUrlInput.value = settings.ollamaBaseUrl || 'http://localhost:11434';
+        if (ollamaModelInput) ollamaModelInput.value = settings.ollamaModel || 'llama3.2';
         updateLLMFieldStates();
 
         // Set C++ as default if no coding language is specified
@@ -154,17 +161,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const openrouterGroup = document.getElementById('openrouterLlmFields');
         const openrouterNote = document.getElementById('openrouterNote');
         const groqGroup = document.getElementById('groqLlmFields');
+        const ollamaGroup = document.getElementById('ollamaLlmFields');
 
         if (geminiGroup) geminiGroup.style.display = provider === 'gemini' ? '' : 'none';
         if (openrouterGroup) openrouterGroup.style.display = provider === 'openrouter' ? '' : 'none';
         if (openrouterNote) openrouterNote.style.display = provider === 'openrouter' ? '' : 'none';
         if (groqGroup) groqGroup.style.display = provider === 'groq' ? '' : 'none';
+        if (ollamaGroup) ollamaGroup.style.display = provider === 'ollama' ? '' : 'none';
 
         if (geminiKeyInput) geminiKeyInput.disabled = provider !== 'gemini';
         if (openrouterKeyInput) openrouterKeyInput.disabled = provider !== 'openrouter';
         if (openrouterModelInput) openrouterModelInput.disabled = provider !== 'openrouter';
         if (groqKeyInput) groqKeyInput.disabled = provider !== 'groq';
         if (groqModelInput) groqModelInput.disabled = provider !== 'groq';
+        if (ollamaBaseUrlInput) ollamaBaseUrlInput.disabled = provider !== 'ollama';
+        if (ollamaModelInput) ollamaModelInput.disabled = provider !== 'ollama';
     };
 
     // Save settings helper function
@@ -190,9 +201,56 @@ document.addEventListener('DOMContentLoaded', () => {
         if (openrouterModelInput) settings.openrouterModel = openrouterModelInput.value;
         if (groqKeyInput) settings.groqKey = groqKeyInput.value;
         if (groqModelInput) settings.groqModel = groqModelInput.value;
+        if (ollamaBaseUrlInput) settings.ollamaBaseUrl = ollamaBaseUrlInput.value;
+        if (ollamaModelInput) settings.ollamaModel = ollamaModelInput.value;
         
         window.api.send('save-settings', settings);
     };
+
+    // Ollama model fetching helper
+    if (fetchOllamaModelsBtn) {
+        fetchOllamaModelsBtn.addEventListener('click', async () => {
+            const originalText = fetchOllamaModelsBtn.innerHTML;
+            fetchOllamaModelsBtn.disabled = true;
+            fetchOllamaModelsBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+            try {
+                if (window.electronAPI && window.electronAPI.getOllamaModels) {
+                    const result = await window.electronAPI.getOllamaModels();
+                    if (result && result.success && Array.isArray(result.models) && result.models.length > 0) {
+                        if (ollamaModelSelect && ollamaModelListContainer) {
+                            ollamaModelSelect.innerHTML = '<option value="">-- Select detected model --</option>';
+                            result.models.forEach(modelName => {
+                                const opt = document.createElement('option');
+                                opt.value = modelName;
+                                opt.textContent = modelName;
+                                if (ollamaModelInput && ollamaModelInput.value === modelName) {
+                                    opt.selected = true;
+                                }
+                                ollamaModelSelect.appendChild(opt);
+                            });
+                            ollamaModelListContainer.style.display = 'block';
+                        }
+                    } else {
+                        alert(result?.error || 'No installed models found in Ollama.');
+                    }
+                }
+            } catch (err) {
+                alert('Error fetching Ollama models: ' + err.message);
+            } finally {
+                fetchOllamaModelsBtn.disabled = false;
+                fetchOllamaModelsBtn.innerHTML = originalText;
+            }
+        });
+    }
+
+    if (ollamaModelSelect) {
+        ollamaModelSelect.addEventListener('change', () => {
+            if (ollamaModelSelect.value && ollamaModelInput) {
+                ollamaModelInput.value = ollamaModelSelect.value;
+                saveSettings();
+            }
+        });
+    }
 
     const updateSpeechFieldStates = () => {
         const provider = speechProviderSelect ? speechProviderSelect.value : 'azure';
@@ -249,7 +307,9 @@ document.addEventListener('DOMContentLoaded', () => {
         openrouterKeyInput,
         openrouterModelInput,
         groqKeyInput,
-        groqModelInput
+        groqModelInput,
+        ollamaBaseUrlInput,
+        ollamaModelInput
     ];
 
     inputs.forEach(input => {

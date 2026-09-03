@@ -782,6 +782,16 @@
                         </div>
                         <div class="choice-radio"></div>
                     </div>
+                    <div class="choice-card" data-value="ollama">
+                        <div class="choice-icon"><i class="fas fa-server"></i></div>
+                        <div class="choice-text">
+                            <div class="choice-title">Ollama (Local AI)</div>
+                            <div class="choice-desc">
+                                100% private, runs entirely on your machine with no API keys. Supports Llama 3.2, DeepSeek, Qwen, and vision models.
+                            </div>
+                        </div>
+                        <div class="choice-radio"></div>
+                    </div>
                 </div>
 
                 <!-- Gemini key fields -->
@@ -895,6 +905,46 @@
                         </div>
                         <div class="hint">
                             Fast inference on Groq hardware. Default: <code>llama-3.3-70b-versatile</code>. See <a href="https://console.groq.com/docs/models" target="_blank" rel="noreferrer">docs/models</a> for more.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ollama fields -->
+                <div id="onboardingOllamaFields" style="display:none;">
+                    <div class="field" style="margin-top: 20px;">
+                        <label for="onboardingOllamaBaseUrl">Ollama Host / Base URL</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-network-wired icon"></i>
+                            <input
+                                type="text"
+                                id="onboardingOllamaBaseUrl"
+                                class="input"
+                                value="http://localhost:11434"
+                                placeholder="http://localhost:11434"
+                                autocomplete="off"
+                                spellcheck="false"
+                            >
+                        </div>
+                        <div class="hint">
+                            Default is <code>http://localhost:11434</code>. Make sure Ollama is running.
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="onboardingOllamaModel">Model</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-cube icon"></i>
+                            <input
+                                type="text"
+                                id="onboardingOllamaModel"
+                                class="input"
+                                value="llama3.2"
+                                placeholder="llama3.2"
+                                autocomplete="off"
+                                spellcheck="false"
+                            >
+                        </div>
+                        <div class="hint">
+                            Enter your installed local model (e.g. <code>llama3.2</code>, <code>llama3.2-vision</code>, <code>qwen2.5-coder</code>).
                         </div>
                     </div>
                 </div>

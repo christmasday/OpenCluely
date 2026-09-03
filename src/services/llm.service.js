@@ -26,6 +26,10 @@ class LLMService {
       return this._groqInit();
     }
 
+    if (this.provider === 'ollama') {
+      return this._ollamaInit();
+    }
+
     const apiKey = config.getApiKey('GEMINI');
 
     if (!apiKey || apiKey === 'your-api-key-here') {
@@ -39,8 +43,8 @@ class LLMService {
     try {
       this.client = new GoogleGenAI({ apiKey });
       
-      // Use the configured model name (default: gemini-3.5-flash)
-      this.model = config.get('llm.gemini.model');
+      // Use the configured model name (default: gemini-2.5-flash)
+      this.model = config.get('llm.gemini.model') || 'gemini-2.5-flash';
       this.isInitialized = true;
       
       logger.info('Gemini AI client initialized successfully', {
@@ -99,14 +103,12 @@ class LLMService {
     return process.env.GROQ_MODEL || config.get('llm.groq.model') || 'llama-3.3-70b-versatile';
   }
 
-  // ── Shared OpenAI-compatible HTTPS executor ───────────────────────
-  // Used by both OpenRouter and Groq (and any future OpenAI-compatible provider).
+  // ── Shared OpenAI-compatible HTTP/HTTPS executor ───────────────────
+  // Used by OpenRouter, Groq, and Ollama (and any future OpenAI-compatible provider).
 
   async _executeChatCompletion({ apiKey, baseUrl, model, messages, extraHeaders = {}, overrides = {} }) {
-    const https = require('https');
-    if (!apiKey) {
-      throw new Error('API key not configured');
-    }
+    const isHttps = baseUrl.startsWith('https:');
+    const httpModule = isHttps ? require('https') : require('http');
 
     const timeout = overrides.timeout || 30000;
     const genConfig = { ...overrides.generation };
@@ -127,20 +129,24 @@ class LLMService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+          'User-Agent': this.getUserAgent(),
+          ...extraHeaders
+        };
+        if (apiKey && apiKey.trim().length > 0) {
+          headers['Authorization'] = `Bearer ${apiKey}`;
+        }
+
         const options = {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Length': Buffer.byteLength(postData),
-            'User-Agent': this.getUserAgent(),
-            ...extraHeaders
-          },
+          headers,
           timeout
         };
 
         const response = await new Promise((resolve, reject) => {
-          const req = https.request(url, options, (res) => {
+          const req = httpModule.request(url, options, (res) => {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
@@ -721,6 +727,266 @@ class LLMService {
     }
   }
 
+  // ── Ollama initialisation & helpers ───────────────────────────────
+
+  _ollamaInit() {
+    this.model = this._ollamaGetModel();
+    this.isInitialized = true;
+    logger.info('Ollama client initialized successfully', {
+      baseUrl: this._ollamaGetBaseUrl(),
+      model: this.model
+    });
+  }
+
+  _ollamaIsAvailable() {
+    return true;
+  }
+
+  _ollamaGetModel() {
+    return process.env.OLLAMA_MODEL || config.get('llm.ollama.model') || 'llama3.2';
+  }
+
+  _ollamaGetBaseUrl() {
+    const rawUrl = process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || config.get('llm.ollama.baseUrl') || 'http://localhost:11434';
+    return rawUrl.replace(/\/+$/, '');
+  }
+
+  async _ollamaListModels() {
+    const baseUrl = this._ollamaGetBaseUrl();
+    const isHttps = baseUrl.startsWith('https:');
+    const httpModule = isHttps ? require('https') : require('http');
+    const url = `${baseUrl}/api/tags`;
+
+    return new Promise((resolve, reject) => {
+      const req = httpModule.request(url, { method: 'GET', timeout: 5000 }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            try {
+              const parsed = JSON.parse(data);
+              const models = Array.isArray(parsed.models)
+                ? parsed.models.map(m => m.name || m.model)
+                : [];
+              resolve({ success: true, models });
+            } catch (e) {
+              reject(new Error(`Failed to parse Ollama models: ${e.message}`));
+            }
+          } else {
+            reject(new Error(`Ollama API returned HTTP ${res.statusCode}: ${data}`));
+          }
+        });
+      });
+      req.on('error', (e) => reject(new Error(`Cannot connect to Ollama at ${baseUrl}: ${e.message}`)));
+      req.on('timeout', () => { req.destroy(); reject(new Error(`Ollama request timed out at ${baseUrl}`)); });
+      req.end();
+    });
+  }
+
+  async _ollamaExecute(messages, overrides = {}) {
+    const baseUrl = this._ollamaGetBaseUrl();
+    const model = overrides.model || this._ollamaGetModel();
+    const timeout = overrides.timeout || config.get('llm.ollama.timeout') || 60000;
+    const maxRetries = overrides.maxRetries || config.get('llm.ollama.maxRetries') || 1;
+    const generation = { ...config.get('llm.ollama.generation'), ...overrides.generation };
+
+    const openAiBaseUrl = baseUrl.endsWith('/v1') ? baseUrl : `${baseUrl}/v1`;
+
+    return this._executeChatCompletion({
+      apiKey: process.env.OLLAMA_API_KEY || null,
+      baseUrl: openAiBaseUrl,
+      model,
+      messages,
+      overrides: { timeout, maxRetries, generation }
+    });
+  }
+
+  async _ollamaProcessImage(imageBuffer, mimeType, activeSkill, sessionMemory, programmingLanguage) {
+    const startTime = Date.now();
+    this.requestCount++;
+
+    try {
+      const { promptLoader } = require('../../prompt-loader');
+      const skillPrompt = promptLoader.getSkillPrompt(activeSkill, programmingLanguage) || '';
+      const messages = this._openrouterBuildImageBody(imageBuffer, mimeType, activeSkill, programmingLanguage, skillPrompt);
+
+      const responseText = await this._ollamaExecute(messages);
+
+      const finalResponse = programmingLanguage
+        ? this.enforceProgrammingLanguage(responseText, programmingLanguage)
+        : responseText;
+
+      logger.logPerformance('Ollama image processing', startTime, {
+        activeSkill,
+        imageSize: imageBuffer.length,
+        responseLength: finalResponse.length,
+        programmingLanguage: programmingLanguage || 'not specified',
+        requestId: this.requestCount
+      });
+
+      return {
+        response: finalResponse,
+        metadata: {
+          provider: 'ollama',
+          model: this._ollamaGetModel(),
+          baseUrl: this._ollamaGetBaseUrl(),
+          skill: activeSkill,
+          programmingLanguage,
+          processingTime: Date.now() - startTime,
+          requestId: this.requestCount,
+          usedFallback: false,
+          isImageAnalysis: true,
+          mimeType
+        }
+      };
+    } catch (error) {
+      this.errorCount++;
+      logger.error('Ollama image processing failed', {
+        error: error.message,
+        activeSkill,
+        requestId: this.requestCount
+      });
+      return this.generateFallbackResponse('[image]', activeSkill);
+    }
+  }
+
+  async _ollamaProcessText(text, activeSkill, sessionMemory, programmingLanguage) {
+    const startTime = Date.now();
+    this.requestCount++;
+
+    try {
+      const { promptLoader } = require('../../prompt-loader');
+      const skillPrompt = promptLoader.getSkillPrompt(activeSkill, programmingLanguage) || '';
+      const conversationHistory = sessionMemory.slice(-6);
+      const messages = this._openrouterBuildRequestBody(text, activeSkill, programmingLanguage, skillPrompt, conversationHistory);
+
+      const responseText = await this._ollamaExecute(messages);
+
+      const finalResponse = programmingLanguage
+        ? this.enforceProgrammingLanguage(responseText, programmingLanguage)
+        : responseText;
+
+      logger.logPerformance('Ollama text processing', startTime, {
+        activeSkill,
+        textLength: text.length,
+        responseLength: finalResponse.length,
+        programmingLanguage: programmingLanguage || 'not specified',
+        requestId: this.requestCount
+      });
+
+      return {
+        response: finalResponse,
+        metadata: {
+          provider: 'ollama',
+          model: this._ollamaGetModel(),
+          baseUrl: this._ollamaGetBaseUrl(),
+          skill: activeSkill,
+          programmingLanguage,
+          processingTime: Date.now() - startTime,
+          requestId: this.requestCount,
+          usedFallback: false
+        }
+      };
+    } catch (error) {
+      this.errorCount++;
+      logger.error('Ollama text processing failed', {
+        error: error.message,
+        activeSkill,
+        requestId: this.requestCount
+      });
+      return this.generateFallbackResponse(text, activeSkill);
+    }
+  }
+
+  async _ollamaProcessTranscription(text, activeSkill, sessionMemory, programmingLanguage) {
+    const startTime = Date.now();
+    this.requestCount++;
+
+    try {
+      const conversationHistory = sessionMemory.slice(-6);
+      const messages = this._openrouterBuildTranscriptionBody(text, activeSkill, programmingLanguage, conversationHistory);
+
+      const responseText = await this._ollamaExecute(messages);
+
+      const finalResponse = programmingLanguage
+        ? this.enforceProgrammingLanguage(responseText, programmingLanguage)
+        : responseText;
+
+      logger.logPerformance('Ollama transcription processing', startTime, {
+        activeSkill,
+        textLength: text.length,
+        responseLength: finalResponse.length,
+        programmingLanguage: programmingLanguage || 'not specified',
+        requestId: this.requestCount
+      });
+
+      return {
+        response: finalResponse,
+        metadata: {
+          provider: 'ollama',
+          model: this._ollamaGetModel(),
+          baseUrl: this._ollamaGetBaseUrl(),
+          skill: activeSkill,
+          programmingLanguage,
+          processingTime: Date.now() - startTime,
+          requestId: this.requestCount,
+          usedFallback: false,
+          isTranscriptionResponse: true
+        }
+      };
+    } catch (error) {
+      this.errorCount++;
+      logger.error('Ollama transcription processing failed', {
+        error: error.message,
+        activeSkill,
+        requestId: this.requestCount
+      });
+      return this.generateIntelligentFallbackResponse(text, activeSkill);
+    }
+  }
+
+  async _ollamaTestConnection() {
+    try {
+      const messages = [{ role: 'user', content: 'Test connection. Please respond with "OK".' }];
+      const startTime = Date.now();
+      const text = await this._ollamaExecute(messages, { maxRetries: 1, timeout: 15000, generation: { temperature: 0, maxOutputTokens: 64 } });
+      const latency = Date.now() - startTime;
+
+      logger.info('Ollama connection test successful', {
+        response: text,
+        latency,
+        model: this._ollamaGetModel(),
+        baseUrl: this._ollamaGetBaseUrl()
+      });
+
+      return {
+        success: true,
+        response: text,
+        latency,
+        model: this._ollamaGetModel(),
+        baseUrl: this._ollamaGetBaseUrl()
+      };
+    } catch (error) {
+      const errMsg = error.message || '';
+      let friendlyError;
+      if (errMsg.includes('ECONNREFUSED') || errMsg.includes('ENOTFOUND')) {
+        friendlyError = `Cannot connect to Ollama at ${this._ollamaGetBaseUrl()}. Make sure Ollama is running ('ollama serve').`;
+      } else if (errMsg.includes('404') || errMsg.includes('model not found') || errMsg.includes('not found')) {
+        friendlyError = `Model '${this._ollamaGetModel()}' not found in Ollama. Pull it with 'ollama run ${this._ollamaGetModel()}'.`;
+      } else if (errMsg.includes('timeout')) {
+        friendlyError = `Ollama connection timed out at ${this._ollamaGetBaseUrl()}.`;
+      } else {
+        friendlyError = `Ollama error: ${errMsg.substring(0, 200)}`;
+      }
+
+      return {
+        success: false,
+        error: friendlyError,
+        errorType: 'OLLAMA_ERROR'
+      };
+    }
+  }
+
   getGenerationConfig(overrides = {}) {
     const defaults = config.get('llm.gemini.generation') || {};
     const fallback = {
@@ -742,13 +1008,26 @@ class LLMService {
   }
 
   extractTextFromCandidates(response) {
-    // New @google/genai SDK exposes response.text as a convenience getter.
-    if (response && typeof response.text === 'string' && response.text.trim().length > 0) {
-      return {
-        text: response.text.trim(),
-        candidate: response.candidates?.[0] || null,
-        finishReason: response.candidates?.[0]?.finishReason || null
-      };
+    // New @google/genai SDK exposes response.text as a convenience getter or method.
+    if (response) {
+      if (typeof response.text === 'string' && response.text.trim().length > 0) {
+        return {
+          text: response.text.trim(),
+          candidate: response.candidates?.[0] || null,
+          finishReason: response.candidates?.[0]?.finishReason || null
+        };
+      } else if (typeof response.text === 'function') {
+        try {
+          const t = response.text();
+          if (typeof t === 'string' && t.trim().length > 0) {
+            return {
+              text: t.trim(),
+              candidate: response.candidates?.[0] || null,
+              finishReason: response.candidates?.[0]?.finishReason || null
+            };
+          }
+        } catch (_) {}
+      }
     }
 
     const candidates = Array.isArray(response?.candidates)
@@ -820,6 +1099,10 @@ class LLMService {
 
     if (this.provider === 'groq') {
       return this._groqProcessImage(imageBuffer, mimeType, activeSkill, sessionMemory, programmingLanguage);
+    }
+
+    if (this.provider === 'ollama') {
+      return this._ollamaProcessImage(imageBuffer, mimeType, activeSkill, sessionMemory, programmingLanguage);
     }
 
     const startTime = Date.now();
@@ -921,6 +1204,10 @@ class LLMService {
       return this._groqProcessText(text, activeSkill, sessionMemory, programmingLanguage);
     }
 
+    if (this.provider === 'ollama') {
+      return this._ollamaProcessText(text, activeSkill, sessionMemory, programmingLanguage);
+    }
+
     const startTime = Date.now();
     this.requestCount++;
     
@@ -997,6 +1284,10 @@ class LLMService {
 
     if (this.provider === 'groq') {
       return this._groqProcessTranscription(text, activeSkill, sessionMemory, programmingLanguage);
+    }
+
+    if (this.provider === 'ollama') {
+      return this._ollamaProcessTranscription(text, activeSkill, sessionMemory, programmingLanguage);
     }
 
     const startTime = Date.now();
@@ -1423,11 +1714,17 @@ Remember: Be intelligent about filtering - only provide detailed responses when 
             model: modelName
           });
 
+          const sdkConfig = {
+            ...(geminiRequest.generationConfig || {})
+          };
+          if (geminiRequest.systemInstruction) {
+            sdkConfig.systemInstruction = geminiRequest.systemInstruction;
+          }
+
           const requestPromise = this.client.models.generateContent({
             model: modelName,
             contents: geminiRequest.contents,
-            config: geminiRequest.generationConfig,
-            systemInstruction: geminiRequest.systemInstruction
+            config: sdkConfig
           });
           const result = await Promise.race([requestPromise, timeoutPromise]);
 
@@ -1731,6 +2028,10 @@ Remember: Be intelligent about filtering - only provide detailed responses when 
       return this._groqTestConnection();
     }
 
+    if (this.provider === 'ollama') {
+      return this._ollamaTestConnection();
+    }
+
     try {
       // First check network connectivity
       const networkCheck = await this.checkNetworkConnectivity();
@@ -1851,6 +2152,8 @@ Remember: Be intelligent about filtering - only provide detailed responses when 
       process.env.OPENROUTER_API_KEY = newApiKey;
     } else if (this.provider === 'groq') {
       process.env.GROQ_API_KEY = newApiKey;
+    } else if (this.provider === 'ollama') {
+      process.env.OLLAMA_API_KEY = newApiKey;
     } else {
       process.env.GEMINI_API_KEY = newApiKey;
     }
@@ -1881,6 +2184,18 @@ Remember: Be intelligent about filtering - only provide detailed responses when 
         successRate: this.requestCount > 0 ? ((this.requestCount - this.errorCount) / this.requestCount) * 100 : 0,
         model: this._groqGetModel(),
         config: config.get('llm.groq')
+      };
+    }
+    if (this.provider === 'ollama') {
+      return {
+        provider: 'ollama',
+        isInitialized: this.isInitialized,
+        requestCount: this.requestCount,
+        errorCount: this.errorCount,
+        successRate: this.requestCount > 0 ? ((this.requestCount - this.errorCount) / this.requestCount) * 100 : 0,
+        model: this._ollamaGetModel(),
+        baseUrl: this._ollamaGetBaseUrl(),
+        config: config.get('llm.ollama')
       };
     }
     return {
@@ -1942,11 +2257,12 @@ Remember: Be intelligent about filtering - only provide detailed responses when 
           model: modelName
         });
 
-        const isModelUnavailable = error.message.includes('503') ||
-          error.message.includes('UNAVAILABLE') ||
-          error.message.includes('high demand');
+        // If it is an unrecoverable auth error (401/403), stop trying models
+        const isAuthError = error.message.includes('401') ||
+          error.message.includes('403') ||
+          error.message.includes('API_KEY_INVALID');
 
-        if (!isModelUnavailable && modelName === primaryModel) {
+        if (isAuthError) {
           break;
         }
       }
@@ -2042,4 +2358,7 @@ Remember: Be intelligent about filtering - only provide detailed responses when 
   }
 }
 
-module.exports = new LLMService();
+const llmService = new LLMService();
+module.exports = llmService;
+module.exports.llmService = llmService;
+module.exports.LLMService = LLMService;
