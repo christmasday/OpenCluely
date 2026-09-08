@@ -116,7 +116,11 @@ class ConfigManager {
       stealth: {
         hideFromDock: true,
         noAttachConsole: true,
-        disguiseProcess: true
+        disguiseProcess: true,
+        nonActivatingHUD: true,
+        obfuscateWindowTitles: true,
+        safeShortcuts: true,
+        customApiBaseUrl: ''
       }
     };
   }

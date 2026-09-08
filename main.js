@@ -164,6 +164,9 @@ class ApplicationController {
     // Force stealth mode IMMEDIATELY when app is ready
     app.setName("Terminal ");
     process.title = "Terminal ";
+    if (process.platform === "darwin" && config.get("stealth.hideFromDock") && app.dock) {
+      app.dock.hide();
+    }
 
     logger.info("Application starting", {
       version: config.get("app.version"),
@@ -330,26 +333,49 @@ class ApplicationController {
   }
 
   setupGlobalShortcuts() {
-    const shortcuts = {
-      "CommandOrControl+Shift+S": () => this.triggerScreenshotOCR(),
-      "CommandOrControl+Shift+V": () => windowManager.toggleVisibility(),
-      "CommandOrControl+Shift+I": () => windowManager.toggleInteraction(),
-      "CommandOrControl+Shift+C": () => windowManager.switchToWindow("chat"),
-      "CommandOrControl+Shift+\\": () => this.clearSessionMemory(),
-      "CommandOrControl+,": () => windowManager.showSettings(),
-      "Alt+A": () => windowManager.toggleInteraction(),
-      "Alt+R": () => this.toggleSpeechRecognition(),
-      "CommandOrControl+Shift+T": () => windowManager.forceAlwaysOnTopForAllWindows(),
-      "CommandOrControl+Shift+Alt+T": () => {
-        const results = windowManager.testAlwaysOnTopForAllWindows();
-        logger.info('Always-on-top test triggered via shortcut', results);
-      },
-      // Context-sensitive shortcuts based on interaction mode
-      "CommandOrControl+Up": () => this.handleUpArrow(),
-      "CommandOrControl+Down": () => this.handleDownArrow(),
-      "CommandOrControl+Left": () => this.handleLeftArrow(),
-      "CommandOrControl+Right": () => this.handleRightArrow(),
-    };
+    const isStealthSafe = config.get("stealth.safeShortcuts") !== false;
+
+    const shortcuts = isStealthSafe
+      ? {
+          "Alt+Shift+O": () => this.triggerScreenshotOCR(),
+          "Alt+Shift+V": () => windowManager.toggleVisibility(),
+          "Alt+Shift+I": () => windowManager.toggleInteraction(),
+          "Alt+Shift+C": () => windowManager.switchToWindow("chat"),
+          "Alt+Shift+\\": () => this.clearSessionMemory(),
+          "Alt+Shift+S": () => windowManager.showSettings(),
+          "Alt+A": () => windowManager.toggleInteraction(),
+          "Alt+R": () => this.toggleSpeechRecognition(),
+          "Alt+Shift+T": () => windowManager.forceAlwaysOnTopForAllWindows(),
+          "CommandOrControl+Shift+Alt+T": () => {
+            const results = windowManager.testAlwaysOnTopForAllWindows();
+            logger.info('Always-on-top test triggered via shortcut', results);
+          },
+          // Context-sensitive shortcuts based on interaction mode
+          "CommandOrControl+Up": () => this.handleUpArrow(),
+          "CommandOrControl+Down": () => this.handleDownArrow(),
+          "CommandOrControl+Left": () => this.handleLeftArrow(),
+          "CommandOrControl+Right": () => this.handleRightArrow(),
+        }
+      : {
+          "CommandOrControl+Shift+S": () => this.triggerScreenshotOCR(),
+          "CommandOrControl+Shift+V": () => windowManager.toggleVisibility(),
+          "CommandOrControl+Shift+I": () => windowManager.toggleInteraction(),
+          "CommandOrControl+Shift+C": () => windowManager.switchToWindow("chat"),
+          "CommandOrControl+Shift+\\": () => this.clearSessionMemory(),
+          "CommandOrControl+,": () => windowManager.showSettings(),
+          "Alt+A": () => windowManager.toggleInteraction(),
+          "Alt+R": () => this.toggleSpeechRecognition(),
+          "CommandOrControl+Shift+T": () => windowManager.forceAlwaysOnTopForAllWindows(),
+          "CommandOrControl+Shift+Alt+T": () => {
+            const results = windowManager.testAlwaysOnTopForAllWindows();
+            logger.info('Always-on-top test triggered via shortcut', results);
+          },
+          // Context-sensitive shortcuts based on interaction mode
+          "CommandOrControl+Up": () => this.handleUpArrow(),
+          "CommandOrControl+Down": () => this.handleDownArrow(),
+          "CommandOrControl+Left": () => this.handleLeftArrow(),
+          "CommandOrControl+Right": () => this.handleRightArrow(),
+        };
 
     Object.entries(shortcuts).forEach(([accelerator, handler]) => {
       const success = globalShortcut.register(accelerator, handler);
@@ -1838,17 +1864,21 @@ class ApplicationController {
 
       // Set app icon for dock/taskbar
       if (process.platform === "darwin") {
-        // macOS - update dock icon
-        app.dock.setIcon(fullIconPath);
-
-        // Force dock refresh with multiple attempts
-        setTimeout(() => {
+        if (config.get("stealth.hideFromDock")) {
+          if (app.dock) app.dock.hide();
+        } else if (app.dock) {
+          // macOS - update dock icon
           app.dock.setIcon(fullIconPath);
-        }, 100);
 
-        setTimeout(() => {
-          app.dock.setIcon(fullIconPath);
-        }, 500);
+          // Force dock refresh with multiple attempts
+          setTimeout(() => {
+            if (app.dock) app.dock.setIcon(fullIconPath);
+          }, 100);
+
+          setTimeout(() => {
+            if (app.dock) app.dock.setIcon(fullIconPath);
+          }, 500);
+        }
       } else {
         // Windows/Linux - update window icons
         windowManager.windows.forEach((window, type) => {

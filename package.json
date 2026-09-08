@@ -88,6 +88,8 @@
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "extendInfo": {
+        "LSUIElement": "1",
+        "CFBundleDisplayName": "System Audio Helper",
         "NSMicrophoneUsageDescription": "OpenCluely needs microphone access to capture audio for speech-to-text transcription.",
         "NSCameraUsageDescription": "OpenCluely needs screen capture access to analyse your screen content.",
         "NSScreenCaptureDescription": "OpenCluely needs screen recording permission to capture and analyse your screen."

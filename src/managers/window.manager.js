@@ -272,6 +272,7 @@ class WindowManager {
 
     // Base options
     const baseOptions = {
+      // Common base options for all windows
       width: windowConfig.width,
       height: windowConfig.height,
       webPreferences: {
@@ -279,18 +280,19 @@ class WindowManager {
         nodeIntegration: false,
         contextIsolation: true,
         backgroundThrottling: false,
-        devTools: true, // Enable DevTools for debugging
+        devTools: true,
       },
-      show: false, // Never show during creation, use showOnCurrentDesktop instead
-      title: windowConfig.title,
+      show: false,
+      // Use generic titles to avoid OS enumeration detection
+      title: config.get('stealth.obfuscateWindowTitles') ? '' : windowConfig.title,
       skipTaskbar: true,
       alwaysOnTop: true,
       visibleOnAllWorkspaces: true,
       fullscreenable: false,
-      // Platform-specific always-on-top settings
-      ...(process.platform === 'darwin' && {
-        level: 'floating' // Start with floating level for macOS
-      })
+      // Prevent focus stealing when HUD windows are displayed
+      focusable: !(type === 'main' || type === 'llmResponse') || !config.get('stealth.nonActivatingHUD'),
+      // Platform specific always-on-top level
+      ...(process.platform === 'darwin' && { level: 'floating' })
     };
 
     // Type-specific window configurations
@@ -300,6 +302,7 @@ class WindowManager {
       // Completely minimal settings window - no decorations at all
       browserWindowOptions = {
         ...baseOptions,
+        // Settings window remains invisible in task switching
         frame: false,
         titleBarStyle: 'hidden',
         transparent: true,
@@ -310,14 +313,13 @@ class WindowManager {
         hasShadow: false,
         backgroundColor: '#00000000',
         level: process.platform === 'darwin' ? 'floating' : undefined,
-        // Additional macOS flags for better always-on-top behavior
         ...(process.platform === 'darwin' && {
           type: 'panel',
           acceptFirstMouse: true,
           disableAutoHideCursor: true
         })
       };
-  } else if (type === 'onboarding') {
+    } else if (type === 'onboarding') {
       // First-run onboarding wizard — same frameless/panel style as
       // settings, but closable (X button) and slightly larger.
       browserWindowOptions = {
@@ -338,27 +340,27 @@ class WindowManager {
           disableAutoHideCursor: true
         })
       };
-  } else if (type === 'main') {
+    } else if (type === 'main') {
       // Main window configuration - fit to content, completely frameless
       browserWindowOptions = {
         ...baseOptions,
+        // Main HUD window: frameless, non-activating
         frame: false,
         titleBarStyle: 'hidden',
         titleBarOverlay: false,
         transparent: true,
         backgroundColor: '#00000000',
-  // Allow resizing so users can adjust width; we will lock height in handlers
-  resizable: true,
-    // Keep the original max width as cap; allow small min width so it can collapse to one icon
-    minWidth: 60,
-    maxWidth: this.windowConfigs.main.width,
+        // Allow resizing width only, height controlled via content
+        resizable: true,
+        minWidth: 60,
+        maxWidth: this.windowConfigs.main.width,
         minimizable: false,
         maximizable: false,
         closable: false,
         hasShadow: false,
         useContentSize: windowConfig.useContentSize || false,
         thickFrame: false,
-        focusable: true,
+        focusable: false,
         ...(process.platform === 'darwin' && {
           titleBarStyle: 'hiddenInset',
           trafficLightPosition: { x: -100, y: -100 },
@@ -372,6 +374,7 @@ class WindowManager {
       // LLM Response window - completely frameless, just content
       browserWindowOptions = {
         ...baseOptions,
+        // LLM response overlay: similar to main HUD but can be interactive
         frame: false,
         titleBarStyle: 'hidden',
         transparent: true,
@@ -382,6 +385,7 @@ class WindowManager {
         closable: false,
         hasShadow: false,
         thickFrame: false,
+        focusable: false,
         ...(process.platform === 'darwin' && {
           titleBarStyle: 'hiddenInset',
           trafficLightPosition: { x: -100, y: -100 },
@@ -831,8 +835,13 @@ class WindowManager {
 
       setTimeout(() => {
         if (win.isDestroyed()) return;
-        win.show();
-        win.focus();
+        const nonActivating = config.get('stealth.nonActivatingHUD') && (win === this.windows.get('main') || win === this.windows.get('llmResponse'));
+        if (nonActivating) {
+          win.showInactive();
+        } else {
+          win.show();
+          win.focus();
+        }
         setMacOSAlwaysOnTop();
         setTimeout(() => { if (!win.isDestroyed()) setMacOSAlwaysOnTop(); }, 100);
         // Keep LLM window visible across workspaces; others revert
@@ -848,8 +857,13 @@ class WindowManager {
       // Linux/Windows
       win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
       win.setAlwaysOnTop(true);
-      win.show();
-      win.focus();
+      const nonActivating = config.get('stealth.nonActivatingHUD') && (win === this.windows.get('main') || win === this.windows.get('llmResponse'));
+      if (nonActivating) {
+        win.showInactive();
+      } else {
+        win.show();
+        win.focus();
+      }
       setTimeout(() => {
         if (win.isDestroyed()) return;
         if (!isLLM) {
