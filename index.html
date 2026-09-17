@@ -353,12 +353,12 @@
   </head>
   <body>
     <div class="command-tab">
-      <div class="command-item">
+      <div class="command-item" id="screenshotButton" title="Capture (Alt+Shift+O / ⌥⇧O)">
         <i class="fas fa-camera"></i>
-        <span>⌘⇧S</span>
+        <span id="screenshotShortcutBadge">⌥⇧O</span>
       </div>
       <div class="command-separator"></div>
-      <div class="command-item" id="micButton">
+      <div class="command-item" id="micButton" title="Toggle Speech (Alt+R)">
         <i class="fas fa-microphone"></i>
       </div>
       <div class="command-separator"></div>
@@ -388,69 +388,78 @@
   <!-- Shortcuts Popover (hidden by default via CSS) -->
   <div id="shortcutsPopover" class="shortcuts-popover">
       <div class="shortcuts-title">
-        <i class="fas fa-bolt"></i> Global Shortcuts
+        <i class="fas fa-bolt"></i> Global Shortcuts (Stealth Safe)
       </div>
       <table class="shortcuts-table">
         <thead>
           <tr>
-            <th style="width: 45%">Shortcut</th>
+            <th style="width: 48%">Shortcut</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <span class="kbd">Ctrl/Cmd</span>
+              <span class="kbd">Alt</span>
               + <span class="kbd">Shift</span>
-              + <span class="kbd">S</span>
+              + <span class="kbd">O</span>
             </td>
-            <td>Capture screenshot and analyze</td>
+            <td>Capture screenshot & analyze</td>
           </tr>
           <tr>
             <td>
-              <span class="kbd">Ctrl/Cmd</span>
+              <span class="kbd">Alt</span>
               + <span class="kbd">Shift</span>
               + <span class="kbd">V</span>
             </td>
-            <td>Toggle visibility</td>
+            <td>Toggle overlay visibility</td>
           </tr>
           <tr>
             <td>
-              <span class="kbd">Ctrl/Cmd</span>
+              <span class="kbd">Alt</span>
               + <span class="kbd">Shift</span>
               + <span class="kbd">I</span>
               <span style="opacity:.7; margin:0 4px;">or</span>
               <span class="kbd">Alt</span>
               + <span class="kbd">A</span>
             </td>
-            <td>Toggle interaction (click-through)</td>
+            <td>Toggle interaction mode</td>
           </tr>
           <tr>
             <td>
-              <span class="kbd">Ctrl/Cmd</span>
+              <span class="kbd">Alt</span>
               + <span class="kbd">Shift</span>
               + <span class="kbd">C</span>
             </td>
-            <td>Open chat</td>
+            <td>Open chat window</td>
           </tr>
           <tr>
             <td>
               <span class="kbd">Alt</span>
               + <span class="kbd">R</span>
             </td>
-            <td>Toggle speech</td>
+            <td>Toggle speech recognition</td>
           </tr>
           <tr>
             <td>
-              <span class="kbd">Ctrl/Cmd</span>
-              + <span class="kbd">,</span>
+              <span class="kbd">Alt</span>
+              + <span class="kbd">Shift</span>
+              + <span class="kbd">S</span>
             </td>
             <td>Open settings</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="kbd">Alt</span>
+              + <span class="kbd">Shift</span>
+              + <span class="kbd">\</span>
+            </td>
+            <td>Clear session memory</td>
           </tr>
         </tbody>
       </table>
       <div class="shortcuts-footer">
-        <span>Tip: Alt+A also toggles interaction from anywhere.</span>
+        <span>Tip: Alt+A toggles interaction · Alt/Option safe shortcuts.</span>
         <a href="https://techycsr.dev" target="_blank" rel="noreferrer noopener">Made by @TechyCSR</a>
       </div>
     </div>

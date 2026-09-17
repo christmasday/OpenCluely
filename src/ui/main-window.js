@@ -269,9 +269,16 @@ class MainWindowUI {
     this.infoButton = document.getElementById('infoButton');
     this.shortcutsPopover = document.getElementById('shortcutsPopover');
 
-        // NEW: Screenshot button is the first .command-item without id
-        const commandItems = document.querySelectorAll('.command-item');
-        this.screenshotButton = commandItems && commandItems[0];
+        // Screenshot button
+        this.screenshotButton = document.getElementById('screenshotButton') || document.querySelector('.command-item');
+
+        // Platform-aware screenshot shortcut badge text
+        const isMac = (navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0) ||
+                      (navigator.userAgent && navigator.userAgent.includes('Mac'));
+        const badge = document.getElementById('screenshotShortcutBadge');
+        if (badge) {
+            badge.textContent = isMac ? '⌥⇧O' : 'Alt+Shift+O';
+        }
 
     if (!this.statusDot || !this.skillIndicator || !this.micButton || !this.screenshotButton) {
             throw new Error('Required UI elements not found');
@@ -1000,8 +1007,10 @@ class MainWindowUI {
 
     setupSettingsShortcut() {
         document.addEventListener('keydown', (e) => {
-            // Cmd+, or Ctrl+, for settings
-            if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+            // Alt+Shift+S or Cmd+, or Ctrl+, for settings
+            const isAltShiftS = e.altKey && e.shiftKey && (e.key === 'S' || e.key === 's');
+            const isCmdComma = (e.metaKey || e.ctrlKey) && e.key === ',';
+            if (isAltShiftS || isCmdComma) {
                 logger.debug('Settings keyboard shortcut pressed');
                 e.preventDefault();
                 this.openSettings();

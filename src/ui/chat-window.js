@@ -25,7 +25,7 @@ class ChatWindowUI {
         try {
             this.setupElements();
             this.setupEventListeners();
-            this.addMessage('Chat window initialized. Click microphone or press ⌘+R to start recording.', 'system');
+            this.addMessage('Chat window initialized. Click microphone or press Alt+R to start recording.', 'system');
             
             logger.info('Chat window UI initialized successfully');
         } catch (error) {

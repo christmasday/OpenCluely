@@ -89,7 +89,7 @@ https://github.com/user-attachments/assets/896a7140-1e85-405d-bfbe-e05c9f3a816b
 
 #### 🖱️ **Main Overlay**
 - Floating command bar
-- Screenshot capture (`⌘⇧S` / `Ctrl+Shift+S`)
+- Screenshot capture (`⌥⇧O` / `Alt+Shift+O`)
 - Microphone toggle (`Alt+R`)
 - Skill / Mode switcher (`⌘↑` / `⌘↓` or click)
 - Language picker (in Coding mode)
@@ -278,14 +278,14 @@ Download pre-built binaries for your platform from the [**Releases page**](https
 
 | Action | Shortcut (macOS) | Shortcut (Windows/Linux) | Description |
 |--------|------------------|--------------------------|-------------|
-| **Screenshot Capture** | `⌘⇧S` | `Ctrl+Shift+S` | Capture screen and analyze with active mode & LLM |
+| **Screenshot Capture** | `⌥⇧O` / `Alt+Shift+O` | `Alt+Shift+O` | Capture screen and analyze with active mode & LLM |
 | **Toggle Speech** | `Alt+R` | `Alt+R` | Start/stop voice recognition |
-| **Toggle Visibility** | `⌘⇧V` | `Ctrl+Shift+V` | Show or hide all OpenCluely windows |
-| **Toggle Interaction** | `⌘⇧I` or `Alt+A` | `Ctrl+Shift+I` or `Alt+A` | Toggle click-through stealth mode |
-| **Switch to Chat** | `⌘⇧C` | `Ctrl+Shift+C` | Open interactive conversation chat |
-| **Clear Memory** | `⌘⇧\` | `Ctrl+Shift+\` | Reset conversation memory for a clean slate |
-| **Force Always-on-Top** | `⌘⇧T` | `Ctrl+Shift+T` | Re-assert topmost window layer across all displays |
-| **Settings** | `⌘,` | `Ctrl+,` | Open the Settings & Configuration window |
+| **Toggle Visibility** | `⌥⇧V` / `Alt+Shift+V` | `Alt+Shift+V` | Show or hide all OpenCluely windows |
+| **Toggle Interaction** | `⌥⇧I` / `Alt+A` | `Alt+Shift+I` / `Alt+A` | Toggle click-through stealth mode |
+| **Switch to Chat** | `⌥⇧C` / `Alt+Shift+C` | `Alt+Shift+C` | Open interactive conversation chat |
+| **Clear Memory** | `⌥⇧\` / `Alt+Shift+\` | `Alt+Shift+\` | Reset conversation memory for a clean slate |
+| **Force Always-on-Top** | `⌥⇧T` / `Alt+Shift+T` | `Alt+Shift+T` | Re-assert topmost window layer across all displays |
+| **Settings** | `⌥⇧S` / `Alt+Shift+S` | `Alt+Shift+S` | Open the Settings & Configuration window |
 | **Cycle Modes** | `⌘↑` / `⌘↓` | `Ctrl+↑` / `Ctrl+↓` | Switch between General, Coding, and Meeting modes (interactive mode) |
 | **Nudge Window** | `⌘` + Arrow Keys | `Ctrl` + Arrow Keys | Move overlay windows around the screen (click-through mode) |
 
@@ -293,10 +293,10 @@ Download pre-built binaries for your platform from the [**Releases page**](https
 
 1. **Launch OpenCluely** → The stealth overlay appears in the corner of your screen.
 2. **Select Mode & Language** → Use `⌘↑` / `⌘↓` or the overlay bar to pick **General**, **Coding**, or **Meeting** mode (and choose your target programming language if in Coding mode).
-3. **Capture Questions** → Press `⌘⇧S` (`Ctrl+Shift+S`) to capture problem statements, IDE code, or diagrams.
+3. **Capture Questions** → Press `⌥⇧O` (`Alt+Shift+O`) to capture problem statements, IDE code, or diagrams.
 4. **Speak Questions** → Press `Alt+R` or click the mic button to ask questions verbally.
 5. **Receive Answers** → The draggable answer window displays optimal solutions, formatted code, and complexity analysis.
-6. **Chat & Iterate** → Press `⌘⇧C` to follow up, ask for optimizations, or discuss edge cases.
+6. **Chat & Iterate** → Press `⌥⇧C` (`Alt+Shift+C`) to follow up, ask for optimizations, or discuss edge cases.
 
 ---
 

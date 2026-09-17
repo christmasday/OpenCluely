@@ -274,6 +274,20 @@
         .settings-note code {
             color: rgba(255, 255, 255, 0.9);
         }
+
+        .kbd-badge {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 5px;
+            padding: 2px 7px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -613,6 +627,54 @@
                         </div>
                         <input type="number" class="input-field" id="windowGap" placeholder="20" min="0" max="100">
                     </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">
+                    <i class="fas fa-keyboard"></i>
+                    Global Shortcuts (Stealth Safe)
+                </div>
+                <div class="settings-section-content">
+                    <div style="font-size: 11px; color: rgba(255, 255, 255, 0.65); margin-bottom: 12px; line-height: 1.4;">
+                        Safe, collision-free global shortcuts designed to avoid triggering browser DevTools or focus blur events.
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <tbody>
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                                <td style="padding: 7px 0; width: 45%;"><span class="kbd-badge">Alt + Shift + O</span></td>
+                                <td style="padding: 7px 0; color: rgba(255, 255, 255, 0.85);">Capture screenshot & analyze</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                                <td style="padding: 7px 0;"><span class="kbd-badge">Alt + Shift + V</span></td>
+                                <td style="padding: 7px 0; color: rgba(255, 255, 255, 0.85);">Toggle overlay visibility</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                                <td style="padding: 7px 0;"><span class="kbd-badge">Alt + Shift + I</span> <span style="opacity: 0.6; font-size: 11px;">or</span> <span class="kbd-badge">Alt + A</span></td>
+                                <td style="padding: 7px 0; color: rgba(255, 255, 255, 0.85);">Toggle interaction mode</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                                <td style="padding: 7px 0;"><span class="kbd-badge">Alt + Shift + C</span></td>
+                                <td style="padding: 7px 0; color: rgba(255, 255, 255, 0.85);">Open chat window</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                                <td style="padding: 7px 0;"><span class="kbd-badge">Alt + R</span></td>
+                                <td style="padding: 7px 0; color: rgba(255, 255, 255, 0.85);">Toggle speech recognition</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                                <td style="padding: 7px 0;"><span class="kbd-badge">Alt + Shift + S</span></td>
+                                <td style="padding: 7px 0; color: rgba(255, 255, 255, 0.85);">Open settings window</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                                <td style="padding: 7px 0;"><span class="kbd-badge">Alt + Shift + \</span></td>
+                                <td style="padding: 7px 0; color: rgba(255, 255, 255, 0.85);">Clear session memory</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 7px 0;"><span class="kbd-badge">Alt + Shift + T</span></td>
+                                <td style="padding: 7px 0; color: rgba(255, 255, 255, 0.85);">Force always-on-top</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
